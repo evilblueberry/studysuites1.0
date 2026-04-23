@@ -418,12 +418,12 @@ DP = recursion + cache + polynomial time`,
 
   // Progress entries
   await prisma.studyProgress.upsert({
-    where: { userId_suiteId_topicId: { userId: demoUser.id, suiteId: suite1.id, topicId: null } },
+    where: { userId_suiteId_topicId: { userId: demoUser.id, suiteId: suite1.id, topicId: topic2.id } },
     update: { completionPercent: 45, lastStudiedAt: new Date() },
     create: {
       userId: demoUser.id,
       suiteId: suite1.id,
-      topicId: null,
+      topicId: topic2.id,
       completionPercent: 45,
       masteryLevel: 2,
     },
