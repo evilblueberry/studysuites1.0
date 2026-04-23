@@ -12,6 +12,8 @@ import {
   TrendingUp,
   Calendar,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 import { cn, formatDate, daysUntil, getStatusColor } from "@/lib/utils";
 
 export const metadata = { title: "Dashboard" };
@@ -53,8 +55,8 @@ export default async function DashboardPage() {
   ]);
 
   const upcomingSuites = ownedSuites
-    .filter((s) => s.examDate && daysUntil(s.examDate) !== null && daysUntil(s.examDate)! >= 0)
-    .sort((a, b) => new Date(a.examDate!).getTime() - new Date(b.examDate!).getTime())
+    .filter((s: any) => s.examDate && daysUntil(s.examDate) !== null && daysUntil(s.examDate)! >= 0)
+    .sort((a: any, b: any) => new Date(a.examDate!).getTime() - new Date(b.examDate!).getTime())
     .slice(0, 3);
 
   const recentSuites = ownedSuites.slice(0, 6);
@@ -95,7 +97,7 @@ export default async function DashboardPage() {
           {
             icon: Zap,
             label: "Total Flashcards",
-            value: ownedSuites.reduce((sum, s) => sum + s._count.flashcards, 0),
+            value: ownedSuites.reduce((sum: number, s: any) => sum + s._count.flashcards, 0),
             color: "text-violet-400",
             bg: "bg-violet-400/10",
           },
@@ -139,7 +141,7 @@ export default async function DashboardPage() {
             <EmptyState />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {recentSuites.map((suite) => (
+              {recentSuites.map((suite: any) => (
                 <SuiteCard key={suite.id} suite={suite} />
               ))}
             </div>
@@ -160,7 +162,7 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {upcomingSuites.map((suite) => {
+                {upcomingSuites.map((suite: any) => {
                   const days = daysUntil(suite.examDate);
                   return (
                     <Link key={suite.id} href={`/suite/${suite.id}`}>
@@ -200,7 +202,7 @@ export default async function DashboardPage() {
                 <h2 className="text-lg font-semibold">Shared With Me</h2>
               </div>
               <div className="space-y-2">
-                {collaboratedSuites.map((suite) => (
+                {collaboratedSuites.map((suite: any) => (
                   <Link key={suite.id} href={`/suite/${suite.id}`}>
                     <div className="glass-card p-3.5 hover:border-white/10 transition-colors">
                       <p className="font-medium text-sm truncate">{suite.courseName}</p>

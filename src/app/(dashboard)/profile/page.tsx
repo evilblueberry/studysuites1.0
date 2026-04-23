@@ -4,6 +4,8 @@ import { formatDate, formatRelativeDate } from "@/lib/utils";
 import { User, BookOpen, Users, Clock, UserCheck } from "lucide-react";
 import ProfileFriends from "./ProfileFriends";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Profile" };
 
 export default async function ProfilePage() {
@@ -35,7 +37,7 @@ export default async function ProfilePage() {
     }),
   ]);
 
-  const friends = friendships.map((f) =>
+  const friends = friendships.map((f: any) =>
     f.userAId === user.id ? f.userB : f.userA
   );
 
@@ -92,7 +94,7 @@ export default async function ProfilePage() {
             Recent Study Activity
           </h2>
           <div className="space-y-2">
-            {recentProgress.map((p) => (
+            {recentProgress.map((p: any) => (
               <div key={p.id} className="flex items-center gap-3 py-2">
                 <div className="w-2 h-2 rounded-full bg-indigo-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">

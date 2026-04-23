@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import SuiteDetailClient from "./SuiteDetailClient";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const suite = await prisma.testSuite.findUnique({ where: { id: params.id } });
   return { title: suite ? `${suite.courseName} — ${suite.examTitle}` : "Suite" };
@@ -46,7 +48,7 @@ export default async function SuiteDetailPage({
   });
 
   const isOwner = suite.ownerId === user.id;
-  const collaboratorRole = suite.collaborators.find((c) => c.userId === user.id)?.role ?? null;
+  const collaboratorRole = suite.collaborators.find((c: any) => c.userId === user.id)?.role ?? null;
 
   return (
     <SuiteDetailClient
