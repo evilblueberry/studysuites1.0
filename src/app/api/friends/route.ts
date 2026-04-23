@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/friends — list all friends
 export async function GET(_req: NextRequest) {
   try {
@@ -17,7 +19,7 @@ export async function GET(_req: NextRequest) {
       },
     });
 
-    const friends = friendships.map((f) =>
+    const friends = friendships.map((f: any) =>
       f.userAId === user.id ? f.userB : f.userA
     );
 

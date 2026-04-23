@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // POST /api/progress — upsert study progress
 export async function POST(req: NextRequest) {
   try {
