@@ -1,0 +1,314 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Required for Supabase connection pooling + Prisma migrations
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Visibility {
+  PRIVATE
+  COLLABORATIVE
+  PUBLIC
+}
+
+enum SuiteStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  ERROR
+}
+
+enum CollaboratorRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+}
+
+enum DifficultyTag {
+  EASY
+  MEDIUM
+  HARD
+  UNREVIEWED
+}
+
+enum ActivityActionType {
+  SUITE_CREATED
+  FILE_UPLOADED
+  TOPIC_VIEWED
+  FLASHCARD_STUDIED
+  QUIZ_COMPLETED
+  NOTE_ADDED
+  COLLABORATOR_INVITED
+  COLLABORATOR_JOINED
+}
+
+// ─── User ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  name      String
+  email     String   @unique
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  ownedSuites      TestSuite[]
+  collaborations   TestSuiteCollaborator[]
+  sentRequests     FriendRequest[]        @relation("Sender")
+  receivedRequests FriendRequest[]        @relation("Receiver")
+  friendshipsA     Friendship[]           @relation("UserA")
+  friendshipsB     Friendship[]           @relation("UserB")
+  notes            TopicNote[]
+  progress         StudyProgress[]
+  activityLogs     ActivityLog[]
+
+  @@map("users")
+}
+
+// ─── Friends ──────────────────────────────────────────────────────────────────
+
+model FriendRequest {
+  id         String              @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     FriendRequestStatus @default(PENDING)
+  createdAt  DateTime            @default(now())
+
+  sender   User @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@map("friend_requests")
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userAId   String
+  userBId   String
+  createdAt DateTime @default(now())
+
+  userA User @relation("UserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User @relation("UserB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  @@unique([userAId, userBId])
+  @@map("friendships")
+}
+
+// ─── Test Suite ───────────────────────────────────────────────────────────────
+
+model TestSuite {
+  id          String      @id @default(cuid())
+  ownerId     String
+  courseName  String
+  examTitle   String
+  examDate    DateTime?
+  description String?
+  visibility  Visibility  @default(PRIVATE)
+  status      SuiteStatus @default(UPLOADING)
+  isArchived  Boolean     @default(false)
+  generationLog Json      @default("[]") // [{ step: string, status: string, ts: string }]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  owner         User                    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  collaborators TestSuiteCollaborator[]
+  files         UploadedFile[]
+  topics        Topic[]
+  flashcards    Flashcard[]
+  quizzes       Quiz[]
+  essayPrompts  EssayPrompt[]
+  notes         TopicNote[]
+  progress      StudyProgress[]
+  activityLogs  ActivityLog[]
+
+  @@map("test_suites")
+}
+
+model TestSuiteCollaborator {
+  id      String           @id @default(cuid())
+  suiteId String
+  userId  String
+  role    CollaboratorRole @default(VIEWER)
+
+  suite TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([suiteId, userId])
+  @@map("test_suite_collaborators")
+}
+
+// ─── Files ────────────────────────────────────────────────────────────────────
+
+model UploadedFile {
+  id            String   @id @default(cuid())
+  suiteId       String
+  fileName      String
+  fileType      String
+  storageUrl    String
+  storagePath   String?  // path within the storage bucket (for deletion)
+  extractedText String?  @db.Text
+  fileSizeBytes Int?
+  uploadedAt    DateTime @default(now())
+
+  suite TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+
+  @@map("uploaded_files")
+}
+
+// ─── Topics ───────────────────────────────────────────────────────────────────
+
+model Topic {
+  id          String   @id @default(cuid())
+  suiteId     String
+  title       String
+  orderIndex  Int
+  summary     String
+  fullContent String   @db.Text
+  keyTerms    Json     @default("[]") // [{ term: string, definition: string }]
+  commonTraps Json     @default("[]") // string[]
+  createdAt   DateTime @default(now())
+
+  suite        TestSuite     @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  flashcards   Flashcard[]
+  quizzes      Quiz[]
+  notes        TopicNote[]
+  progress     StudyProgress[]
+  essayPrompts EssayPrompt[]
+
+  @@map("topics")
+}
+
+// ─── Flashcards ───────────────────────────────────────────────────────────────
+
+model Flashcard {
+  id            String        @id @default(cuid())
+  suiteId       String
+  topicId       String?
+  front         String
+  back          String
+  difficultyTag DifficultyTag @default(UNREVIEWED)
+  orderIndex    Int           @default(0)
+
+  suite TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  topic Topic?    @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@map("flashcards")
+}
+
+// ─── Quiz ─────────────────────────────────────────────────────────────────────
+
+model Quiz {
+  id      String @id @default(cuid())
+  suiteId String
+  topicId String?
+  title   String
+
+  suite     TestSuite     @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  topic     Topic?        @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  questions QuizQuestion[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id           String       @id @default(cuid())
+  quizId       String
+  questionText String
+  questionType QuestionType @default(MULTIPLE_CHOICE)
+  choices      Json?        // string[] for MC
+  correctAnswer String
+  explanation  String
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_questions")
+}
+
+// ─── Essay Prep ───────────────────────────────────────────────────────────────
+
+model EssayPrompt {
+  id        String @id @default(cuid())
+  suiteId   String
+  topicId   String?
+  prompt    String
+  outline   String @db.Text
+  keyPoints Json   @default("[]") // string[]
+
+  suite TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  topic Topic?    @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@map("essay_prompts")
+}
+
+// ─── Notes & Collaboration ────────────────────────────────────────────────────
+
+model TopicNote {
+  id        String   @id @default(cuid())
+  suiteId   String
+  topicId   String
+  authorId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  suite  TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  topic  Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  author User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("topic_notes")
+}
+
+// ─── Progress Tracking ────────────────────────────────────────────────────────
+
+model StudyProgress {
+  id                String   @id @default(cuid())
+  userId            String
+  suiteId           String
+  topicId           String?
+  completionPercent Float    @default(0)
+  masteryLevel      Int      @default(0) // 0-5
+  lastStudiedAt     DateTime @default(now())
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  suite TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  topic Topic?    @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, suiteId, topicId])
+  @@map("study_progress")
+}
+
+// ─── Activity Log ─────────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id         String             @id @default(cuid())
+  suiteId    String
+  userId     String
+  actionType ActivityActionType
+  metadata   Json               @default("{}")
+  createdAt  DateTime           @default(now())
+
+  suite TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
