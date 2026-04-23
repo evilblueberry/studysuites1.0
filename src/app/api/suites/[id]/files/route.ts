@@ -5,6 +5,8 @@ import { storageProvider } from "@/services/storage";
 import { extractTextFromBuffer } from "@/services/fileParser";
 import { processSuite } from "@/services/suiteProcessor";
 
+export const dynamic = "force-dynamic";
+
 // POST /api/suites/[id]/files — upload files and trigger AI processing
 export async function POST(
   req: NextRequest,

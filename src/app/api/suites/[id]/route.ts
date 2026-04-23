@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 async function checkSuiteAccess(suiteId: string, userId: string, requireOwner = false) {
   const suite = await prisma.testSuite.findUnique({
     where: { id: suiteId },
@@ -13,7 +15,7 @@ async function checkSuiteAccess(suiteId: string, userId: string, requireOwner = 
   if (!suite) return null;
 
   const isOwner = suite.ownerId === userId;
-  const collaborator = suite.collaborators.find((c) => c.userId === userId);
+  const collaborator = suite.collaborators.find((c: any) => c.userId === userId);
   const hasAccess = isOwner || !!collaborator;
 
   if (requireOwner && !isOwner) return null;

@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const InviteSchema = z.object({
   email: z.string().email(),
   role: z.enum(["EDITOR", "VIEWER"]).default("VIEWER"),
